@@ -1,7 +1,7 @@
 // For custom deserializer.
+use serde::{de, Deserialize, Deserializer};
 use std::fmt;
 use std::marker::PhantomData;
-use serde::{de, Deserialize, Deserializer};
 
 use std::collections::HashMap;
 
@@ -80,26 +80,29 @@ pub struct Torrent {
 }
 
 pub fn checks(files: Vec<File>, torrents: Vec<Torrent>) {
-  let mut files_map: HashMap<Vec<String>, File> = HashMap::new();
-  for file in files {
-      files_map.insert(file.path.clone(), file);
-  }
+    let mut files_map: HashMap<Vec<String>, File> = HashMap::new();
+    for file in files {
+        files_map.insert(file.path.clone(), file);
+    }
 
-  for torrent in torrents {
-    for file in torrent.info.files {
-        let path = file.path.clone();
-        match files_map.get(&path) {
-            Some(File { length, .. }) if length == &file.length => println!("path and lenth matched {:?}", file),
-            Some(file) => println!("length not matched{:?}", file),
-            None => println!("{:?} is not found.", path)
+    for torrent in torrents {
+        for file in torrent.info.files {
+            let path = file.path.clone();
+            match files_map.get(&path) {
+                Some(File { length, .. }) if length == &file.length => {
+                    println!("path and lenth matched {:?}", file)
+                }
+                Some(file) => println!("length not matched{:?}", file),
+                None => println!("{:?} is not found.", path),
+            }
         }
     }
-  }
 }
 
 // Custom deserializer to convert String to Vec<String>.
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     struct StringOrVec(PhantomData<Vec<String>>);
 
@@ -111,13 +114,15 @@ fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error
         }
 
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where E: de::Error
+        where
+            E: de::Error,
         {
             Ok(vec![value.to_owned()])
         }
 
         fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-            where S: de::SeqAccess<'de>
+        where
+            S: de::SeqAccess<'de>,
         {
             Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
         }
