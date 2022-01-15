@@ -19,11 +19,6 @@ fn main() -> io::Result<()> {
         serde_bencode::from_bytes(&torrent_content).expect("Unable to parse torrent")
     }).collect();
 
-    let torrent_path = env::args().nth(1).expect("no path given");
-    let mut torrent_content = Vec::new();
-    let mut torrent_file = fs::File::open(&torrent_path).expect("Unable to open file");
-    torrent_file.read_to_end(&mut torrent_content).expect("Unable to read");
-
     torch::checks(
         serde_json::from_str(&input).expect("Unable to parse JSON"),
         torrents
