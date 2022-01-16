@@ -54,13 +54,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, macOS-latest, windows-latest]
-        build: [stable, beta, nightly]
-        include:
-          - build: beta
-            rust: beta
-          - build: nightly
-            rust: nightly
-            benches: true
     runs-on: ${{ matrix.os }}
 
     steps:
