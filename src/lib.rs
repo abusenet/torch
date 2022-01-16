@@ -1,6 +1,8 @@
 // For custom deserializer.
 use serde::{de, Deserialize, Deserializer};
 use std::fmt;
+use std::fs;
+use std::io::Read;
 use std::marker::PhantomData;
 
 use std::collections::HashMap;
@@ -78,30 +80,68 @@ pub struct Torrent {
     #[serde(default)]
     #[serde(rename = "created by")]
     created_by: Option<String>,
+    // The .path is not part of spec, but used by this library.
+    #[serde(default)]
+    path: Vec<String>,
+}
+
+pub fn parse_json(input: String) -> Vec<File> {
+    serde_json::from_str(&input).unwrap_or_else(|_| panic!("Unable to parse {}", input))
+}
+
+pub fn parse_torrent(path: String) -> Torrent {
+    let mut torrent_content = Vec::new();
+    let mut torrent_file =
+        fs::File::open(&path).unwrap_or_else(|_| panic!("Unable to open {}", path));
+    torrent_file
+        .read_to_end(&mut torrent_content)
+        .unwrap_or_else(|_| panic!("Unable to read {:?}", path));
+    let torrent = serde_bencode::from_bytes(&torrent_content)
+        .unwrap_or_else(|_| panic!("Unable to parse {}", path));
+    Torrent {
+        path: vec![path],
+        ..torrent
+    }
 }
 
 pub fn checks(files: Vec<File>, torrents: Vec<Torrent>) {
+    // Converts the list into a hash map by path for faster lookup.
     let mut files_map: HashMap<String, File> = HashMap::new();
     for file in files {
         files_map.insert(file.path.join("/"), file);
     }
 
     for torrent in torrents {
-        println!("Checking torrent {:?}", torrent.info.name);
+        let info = torrent.info;
+        println!("{}", torrent.path.join("/"));
 
-        for file in torrent.info.files {
+        let mut files = info.files;
+        // If the torrent only has 1 file, the `files` field is empty,
+        // and the `info.length` has the length of that only file.
+        if files.is_empty() {
+            files.push(File {
+                // Use empty path here so we can prepend in the loop.
+                path: vec![],
+                length: info.length.unwrap(),
+                extra_fields: None,
+            });
+        }
+
+        for file in files {
+            let mut path = file.path;
             // Files inside torrent has relative path to the torrent.info.name,
-            // so we concat them together for full path.
-            let path = format!("{}/{}", torrent.info.name, file.path.join("/"));
+            // so we prepend torrent.info.name for full path.
+            path.splice(0..0, [info.name.to_owned()]);
+            let path = path.join("/");
             match files_map.get(&path) {
                 Some(File { length, .. }) if length == &file.length => {
-                    println!("File {:?} is correct", path)
+                    println!("|__ {} ({}) ✅", path, length)
                 }
                 Some(File { length, .. }) => println!(
-                    "File {:?} with size {} has actual size of {}.",
+                    "|__ {} ({}) ❌ - Actual size {}.",
                     path, file.length, length
                 ),
-                None => println!("File {:?} is not found.", path),
+                None => println!("|__ {} ❌ - Not Found", path),
             }
         }
     }

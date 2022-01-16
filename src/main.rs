@@ -1,6 +1,6 @@
 use std::env;
-use std::fs;
 use std::io::{self, Read};
+use torch::{checks, parse_json, parse_torrent};
 
 fn main() -> io::Result<()> {
     // Reads list of files to check from stdin.
@@ -14,22 +14,9 @@ fn main() -> io::Result<()> {
     let mut args: Vec<String> = env::args().collect();
     // remove first argument which is self
     args.remove(0);
-    let torrents = args
-        .into_iter()
-        .map(|torrent_path| {
-            let mut torrent_content = Vec::new();
-            let mut torrent_file = fs::File::open(&torrent_path).expect("Unable to open file");
-            torrent_file
-                .read_to_end(&mut torrent_content)
-                .expect("Unable to read");
-            serde_bencode::from_bytes(&torrent_content).expect("Unable to parse torrent")
-        })
-        .collect();
+    let torrents = args.into_iter().map(parse_torrent).collect();
 
-    torch::checks(
-        serde_json::from_str(&input).expect("Unable to parse JSON"),
-        torrents,
-    );
+    checks(parse_json(input), torrents);
 
     Ok(())
 }
