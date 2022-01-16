@@ -26,7 +26,7 @@ pub struct File {
     #[serde(deserialize_with = "string_or_seq_string")]
     path: Vec<String>,
     #[serde(alias = "Size")]
-    length: u64,
+    length: i64,
     #[serde(alias = "Hashes")]
     extra_fields: Option<Hashes>,
 }
