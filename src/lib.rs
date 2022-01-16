@@ -22,6 +22,7 @@ struct Hashes {
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct File {
+    // A vector of path segments.
     #[serde(alias = "Path")]
     #[serde(deserialize_with = "string_or_seq_string")]
     path: Vec<String>,
@@ -80,20 +81,27 @@ pub struct Torrent {
 }
 
 pub fn checks(files: Vec<File>, torrents: Vec<Torrent>) {
-    let mut files_map: HashMap<Vec<String>, File> = HashMap::new();
+    let mut files_map: HashMap<String, File> = HashMap::new();
     for file in files {
-        files_map.insert(file.path.clone(), file);
+        files_map.insert(file.path.join("/"), file);
     }
 
     for torrent in torrents {
+        println!("Checking torrent {:?}", torrent.info.name);
+
         for file in torrent.info.files {
-            let path = file.path.clone();
+            // Files inside torrent has relative path to the torrent.info.name,
+            // so we concat them together for full path.
+            let path = format!("{}/{}", torrent.info.name, file.path.join("/"));
             match files_map.get(&path) {
                 Some(File { length, .. }) if length == &file.length => {
-                    println!("path and lenth matched {:?}", file)
+                    println!("File {:?} is correct", path)
                 }
-                Some(file) => println!("length not matched{:?}", file),
-                None => println!("{:?} is not found.", path),
+                Some(File { length, .. }) => println!(
+                    "File {:?} with size {} has actual size of {}.",
+                    path, file.length, length
+                ),
+                None => println!("File {:?} is not found.", path),
             }
         }
     }
