@@ -33,6 +33,24 @@ The following fields are also acceptable, making it compatible with rclone's
 }
 ```
 
+`torch` displays all files checked, whether they are ok or not. To see only
+files with errors, pipe through `grep`, i.e.:
+
+```shell
+torch *.torrent | grep '❌'
+```
+
+For torrent files created with BitComet, they can have padding with folders
+inside `.pad`, and may be reported as missing. In that case, they can be filtered
+out using `grep`, i.e.:
+
+```shell
+torch *.torrent | grep -v '.pad/'
+```
+
+If it has not been clear enough, `torch` is made as a small Unix tool, so it only
+does one thing, and should be combined with other tools to make it more useful.
+
 ## Examples
 
 ```
